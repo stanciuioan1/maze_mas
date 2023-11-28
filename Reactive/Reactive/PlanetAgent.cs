@@ -48,6 +48,11 @@ namespace Reactive
                 {
                     int x = Utils.RandNoGen.Next(Utils.Size);
                     int y = Utils.RandNoGen.Next(Utils.Size);
+                    while (Utils.maze[x,y] == 1)
+                    {
+                        x = Utils.RandNoGen.Next(Utils.Size);
+                        y = Utils.RandNoGen.Next(Utils.Size);
+                    }
                     compPos = Utils.Str(x, y);
                 }
 

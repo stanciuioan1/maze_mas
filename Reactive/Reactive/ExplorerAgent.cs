@@ -80,10 +80,10 @@ namespace Reactive
             int d = Utils.RandNoGen.Next(4);
             switch (d)
             {
-                case 0: if (_x > 0) _x--; break;
-                case 1: if (_x < Utils.Size - 1) _x++; break;
-                case 2: if (_y > 0) _y--; break;
-                case 3: if (_y < Utils.Size - 1) _y++; break;
+                case 0: if (_x > 0 && Utils.maze[_x-1, _y] == 0) _x--; break;
+                case 1: if (_x < Utils.Size - 1 && Utils.maze[_x + 1, _y] == 0) _x++; break;
+                case 2: if (_y > 0 && Utils.maze[_x, _y - 1] == 0) _y--; break;
+                case 3: if (_y < Utils.Size - 1 && Utils.maze[_x, _y + 1] == 0) _y++; break;
             }
         }
 
@@ -92,10 +92,13 @@ namespace Reactive
             int dx = _x - Utils.Size / 2;
             int dy = _y - Utils.Size / 2;
 
-            if (Math.Abs(dx) > Math.Abs(dy))
+            if (Math.Abs(dx) > Math.Abs(dy) && Utils.maze[_x - Math.Sign(dx), _y] == 0)
                 _x -= Math.Sign(dx);
             else
+                if (Utils.maze[_x, _y - Math.Sign(dy)] == 0)
                 _y -= Math.Sign(dy);
+            else
+                MoveRandomly();
         }
     }
 }

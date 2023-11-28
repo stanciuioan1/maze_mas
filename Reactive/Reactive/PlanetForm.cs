@@ -57,6 +57,10 @@ namespace Reactive
                 g.DrawLine(Pens.DarkGray, 20, 20 + i * cellSize, 20 + Utils.Size * cellSize, 20 + i * cellSize);
                 g.DrawLine(Pens.DarkGray, 20 + i * cellSize, 20, 20 + i * cellSize, 20 + Utils.Size * cellSize);
             }
+            for (int i = 0; i < Utils.Size; i++)
+                for (int j = 0; j < Utils.Size; j++)
+                    if (Utils.maze[i,j] == 1)
+                       g.FillRectangle(Brushes.Black, 20 + i * cellSize, 20 + j * cellSize, cellSize, cellSize);
 
             g.FillEllipse(Brushes.Red, 20 + Utils.Size / 2 * cellSize + 4, 20 + Utils.Size / 2 * cellSize + 4, cellSize - 8, cellSize - 8); // the base
 
@@ -83,6 +87,11 @@ namespace Reactive
 
             Graphics pbg = pictureBox.CreateGraphics();
             pbg.DrawImage(_doubleBufferImage, 0, 0);
+        }
+
+        private void pictureBox_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

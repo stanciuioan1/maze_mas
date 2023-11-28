@@ -6,8 +6,22 @@ namespace Reactive
     public class Utils
     {
         public static int Size = 11;
-        public static int NoExplorers = 5;
+        public static int NoExplorers = 1;
         public static int NoResources = 10;
+        //int[,] maze = new int[Utils.Size, Utils.Size];
+        public static int[,] maze = {{0,0,1,0,0,0,0,0,0,0,0},
+                                   {0,0,1,0,1,0,1,1,1,0,0},
+                                   {0,0,1,0,0,0,1,0,1,1,0},
+                                   {0,0,1,1,1,0,1,1,1,1,0},
+                                   {0,0,0,0,1,0,0,1,0,0,0},
+                                   {0,1,1,1,1,0,0,0,1,0,0},
+                                   {0,1,0,0,0,0,0,0,1,0,0},
+                                   {0,1,1,1,1,1,1,0,1,1,1},
+                                   {0,0,0,1,0,0,0,0,1,0,0},
+                                   {1,1,0,0,0,0,0,0,1,0,0},
+                                   {0,1,0,0,0,0,0,0,0,0,0},
+            };
+        
 
         public static int Delay = 200;
         public static Random RandNoGen = new Random();
