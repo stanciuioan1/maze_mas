@@ -1,6 +1,6 @@
 ﻿namespace Reactive
 {
-    partial class PlanetForm
+    partial class MazeForm
     {
         /// <summary>
         /// Required designer variable.
@@ -36,21 +36,22 @@
             // 
             this.pictureBox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pictureBox.Location = new System.Drawing.Point(0, 0);
+            this.pictureBox.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.pictureBox.Name = "pictureBox";
-            this.pictureBox.Size = new System.Drawing.Size(595, 591);
+            this.pictureBox.Size = new System.Drawing.Size(446, 480);
             this.pictureBox.TabIndex = 0;
             this.pictureBox.TabStop = false;
-            this.pictureBox.Click += new System.EventHandler(this.pictureBox_Click);
             this.pictureBox.Paint += new System.Windows.Forms.PaintEventHandler(this.pictureBox_Paint);
             this.pictureBox.Resize += new System.EventHandler(this.pictureBox_Resize);
             // 
-            // PlanetForm
+            // MazeForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(595, 591);
+            this.ClientSize = new System.Drawing.Size(446, 480);
             this.Controls.Add(this.pictureBox);
-            this.Name = "PlanetForm";
+            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Name = "MazeForm";
             this.Text = "Planet";
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox)).EndInit();
             this.ResumeLayout(false);

@@ -9,13 +9,14 @@ namespace Reactive
         {
             EnvironmentMas env = new EnvironmentMas(0, 100);
 
-            var planetAgent = new PlanetAgent();
-            env.Add(planetAgent, "planet");
+            var mazeAgent = new MazeAgent();
+            env.Add(mazeAgent, "maze");
             
             for (int i = 1; i <= Utils.NoExplorers; i++)
             {
                 var explorerAgent = new ExplorerAgent();
                 env.Add(explorerAgent, "explorer" + i);
+                mazeAgent.Explorers.Add(explorerAgent);
             }
 
             Thread.Sleep(500);
