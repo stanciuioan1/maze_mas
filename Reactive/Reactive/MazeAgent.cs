@@ -186,6 +186,7 @@ namespace Reactive
 
         private void HandleChange(string sender, string position)
         {
+            // Todo: Why change the position without checking if it is blocking.
             ExplorerPositions[sender] = position;
 
             foreach (string k in ExplorerPositions.Keys)
@@ -194,7 +195,7 @@ namespace Reactive
                     continue;
                 if (ExplorerPositions[k] == position)
                 {
-                    Send(sender, "block");
+                    Send(sender, Utils.Str("block", ExplorerPositions[k]));
                     return;
                 }
             }
@@ -215,9 +216,15 @@ namespace Reactive
                 ExplorerVisible[sender] = false;
                 ExplorerPositions.Remove(sender);
 
-                Console.WriteLine("Remaining explorers: {0}", ExplorerPositions.Count);
+                Console.WriteLine("Remaining Explirers: {0}", ExplorerPositions.Count);
                 if(ExplorerPositions.Count == 0)
                 {
+                    Console.WriteLine("{0}: Stopped", Name);
+                    foreach(string agent in Environment.AllAgents())
+                    {
+                        Console.WriteLine("Remaining agent: {0}", agent);
+                    }
+                    _formGui.Close();
                     this.Stop();
                 }
             } 

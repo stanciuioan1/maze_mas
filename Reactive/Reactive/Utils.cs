@@ -8,7 +8,7 @@ namespace Reactive
     public class Utils
     {
         public static int Size = 11;
-        public static int NoExplorers = 2;
+        public static int NoExplorers = 5;
         public static int[,] Maze = {
             {2,1,1,1,1,1,1,1,1,1,3},
             {0,1,0,0,0,0,1,0,0,0,0},
@@ -106,6 +106,10 @@ namespace Reactive
         public static string Str(object p1, object p2, object p3)
         {
             return string.Format("{0} {1} {2}", p1, p2, p3);
+        }
+        public static string Str(object p1, object p2, object p3, object p4)
+        {
+            return string.Format("{0} {1} {2} {3}", p1, p2, p3, p4);
         }
     }
 }
