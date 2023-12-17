@@ -130,9 +130,6 @@ namespace Reactive
 
                 // The state will be treated in the HandleAction() method.
                 Send(Name, "do_action");
-
-                // Explore directions and try to get there.
-                // ExecuteExploringStrategy();
             }
             else if (_state == State.Exploring)
             {
