@@ -102,10 +102,6 @@ namespace Reactive
                     HandleSpawn();
                     break;
 
-                case "waiting":
-                    HandleWaiting(message.Sender, parameters);
-                    break;
-
                 case "try_move":
                     HandleTryMove(message.Sender, parameters);
                     break;
@@ -179,18 +175,6 @@ namespace Reactive
             if (numberOfAvailable > 0) {
                 _spawnTimer.Start();
             }
-        }
-
-        /// <summary>
-        /// This is a relay type of action. The purpose is to simplify the logic from the agent.
-        /// Will redirect its action to do action.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="parameters"></param>
-        private void HandleWaiting(string sender, string parameters)
-        {
-            // Will just poke the agent to do an action.
-            Send(sender, "do_action");
         }
 
         /// <summary>

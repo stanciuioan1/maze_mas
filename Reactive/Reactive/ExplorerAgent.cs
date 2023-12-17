@@ -132,7 +132,7 @@ namespace Reactive
                 _nextDirections = GetNextDirectionsOrdered();
 
                 // The state will be treated in the HandleAction() method.
-                Send("maze", "waiting");
+                Send(Name, "do_action");
 
                 // Explore directions and try to get there.
                 // ExecuteExploringStrategy();
@@ -273,7 +273,7 @@ namespace Reactive
             if (_state == State.DeadEnd && _state == State.Exit)
             {
                 // If in the dead end state, no matter the case, try again.
-                Send("maze", "waiting");
+                Send(Name, "do_action");
                 return;
             }
 
@@ -288,7 +288,7 @@ namespace Reactive
                 Weights.Values[_x, _y, dir] = 0;
 
                 _state = State.DeadEnd;
-                Send("maze", "waiting");
+                Send(Name, "do_action");
                 return;
             }
 
@@ -296,7 +296,7 @@ namespace Reactive
             {
                 // What to do now? Both are exploring. Doing the same for now.
                 // Could be an error here?
-                Send("maze", "waiting");
+                Send(Name, "do_action");
                 return;
             }
         }
@@ -343,8 +343,7 @@ namespace Reactive
             if (_nextDirections.Count == 0)
             {
                 _state = State.DeadEnd;
-                Send("maze", "waiting");
-/*                Send("maze", Utils.Str("try_move", _lastPositions.Peek()));*/            
+                Send(Name, "do_action");
             }
             else
             {
@@ -386,7 +385,7 @@ namespace Reactive
                 // Update directions.
                 _nextDirections = availableDirections;
 
-                Send("maze", "waiting");
+                Send(Name, "do_action");
             }
         }
 
