@@ -102,7 +102,8 @@ namespace Reactive
                         // Split the square in 4 triangles and draw based on the weight.
                         for(int dir = 0; dir < 4; dir ++)
                         {
-                            Color newColor = Color.FromArgb((int)((1 - _ownerAgent.SelectedExplorer.Weights.Values[i, j, dir]) * 255), Color.Pink);
+                            int colorAlpha = (int)(255 - _ownerAgent.SelectedExplorer.Weights.Values[i, j, dir] * 255.0);
+                            Color newColor = Color.FromArgb(colorAlpha, Color.Bisque);
                             PointF[] points = new PointF[3];
                             points[0] = pointFs[pointsPositions[dir, 0]];
                             points[1] = pointFs[pointsPositions[dir, 1]];
