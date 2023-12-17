@@ -38,14 +38,14 @@ namespace Reactive
             List<string> parameters;
             Utils.ParseMessage(message.Content, out action, out parameters);
 
-            switch(action)
+            switch (action)
             {
-                case "what_state":
-                    HandleWhatState(message.Sender, parameters);
+                case "do_action":
+                    HandleAction(parameters);
                     break;
 
-                case "state":
-                    HandleState(parameters);
+                case "move":
+                    HandleMove(parameters);
                     break;
 
                 case "avoid":
@@ -54,6 +54,18 @@ namespace Reactive
 
                 case "exploring":
                     HandleExplored(parameters);
+                    break;
+
+                case "block":
+                    HandleBlock(parameters);
+                    break;
+
+                case "what_state":
+                    HandleWhatState(message.Sender, parameters);
+                    break;
+
+                case "state":
+                    HandleState(parameters);
                     break;
 
                 case "found":
@@ -67,81 +79,143 @@ namespace Reactive
                 case "come":
                     HandleCome(parameters);
                     break;
-
-                case "move":
-                    HandleMove(parameters);
-                    break;
-
-                case "block":
-                    HandleBlock(parameters);
-                    break;
             }
         }
 
-        private void HandleWhatState(string sender, List<string> parameters)
+        /// <summary>
+        /// Action responsible with analising the current state and decide the next move.
+        /// </summary>
+        /// <param name="parameters"> Not used yet </param>
+        private void HandleAction(List<string> parameters)
         {
-            Send(sender, Utils.Str("state", _state.ToString()));
+            // The position did not change. Maybe being here after being blocked. (Can make a variable to check that)
+            Console.WriteLine("{0}: HandleAction: State[{1}], Position({2}, {3})", Name, _state.ToString(), _x, _y);
+
+            if (_state == State.Exploring)
+            {
+                // Don t know yet what to do.
+                // Maybe just explore strategy.
+                ExecuteExploringStrategy();
+            }
+            else if (_state == State.DeadEnd)
+            {
+                // Don t know yet what to do.
+                // Maybe just try to go to the last position.
+                ExecuteDeadEndStrategy();
+            }
+            else if (_state == State.Exit)
+            {
+                // Maybe just try to go to the next position to the exit.
+                Send("maze", Utils.Str("try_move", _pathToExit.Peek()));
+            }
         }
 
-        private void HandleState(List<string> parameters)
+        /// <summary>
+        /// Upon moving successfully, this method is called. Its responsability is to decide the next move with respect to the current state.
+        /// </summary>
+        /// <param name="parameters"></param>
+        private void HandleMove(List<string> parameters)
         {
-            // In the meantime, exit state could be imposed. Do nothing in this case.
-            if (_state == State.Exit) return;
+            Console.WriteLine("{0}: HandleMove: State[{1}], OldPosition({2}, {3}), NewPosition({4}, {5})", Name, _state.ToString(), _x, _y, parameters[0], parameters[1]);
 
-            if (parameters[0] == State.Exploring.ToString())
+            int oldX = _x;
+            int oldY = _y;
+            _x = int.Parse(parameters[0]);
+            _y = int.Parse(parameters[1]);
+
+            if (_state == State.NotStarted)
             {
+                // Going to exploration <3.
+                _state = State.Exploring;
+
+                // Search for the next available directions with no exception.
+                _nextDirections = GetNextDirectionsOrdered();
+
+                // The state will be treated in the HandleAction() method.
+                Send("maze", "waiting");
+
+                // Explore directions and try to get there.
+                // ExecuteExploringStrategy();
+            }
+            else if (_state == State.Exploring)
+            {
+                // Push the last into the _lastPositions stack.
+                _lastPositions.Push(Utils.Str(oldX, oldY));
+
+                // Send to all that position has been explored.
+                int dir = Utils.GetDirrerentialDirection(oldX, oldY, _x, _y);
+                Broadcast(Utils.Str("exploring", oldX, oldY, dir), true, "explorers_channel");
+
                 // Create directions in which to move with exceptions of going back.
                 _nextDirections = GetNextDirectionsOrdered(_lastPositions.ToList());
 
                 // Explore directions and try to get there.
                 ExecuteExploringStrategy();
-            } 
-            else if (parameters[0] == State.DeadEnd.ToString())
+            }
+            else if (_state == State.DeadEnd)
             {
-                _state = State.DeadEnd;
+                // Send to all to avoid that position.
+                // If I were to go back, avoid this direction.
+                int dir = Utils.GetDirrerentialDirection(_x, _y, oldX, oldY);
+                Weights.Values[_x, _y, dir] = 0;
+                Broadcast(Utils.Str("avoid", _x, _y, dir), false, "explorers_channel");
+
                 ExecuteDeadEndStrategy();
             }
-        }
-
-        private void HandleExit(List<string> parameters, bool isFirst)
-        {
-            _x = int.Parse(parameters[0]);
-            _y = int.Parse(parameters[1]);
-
-            // Send to all others the position if it was first time discovered.
-            if(isFirst)
+            else if (_state == State.Exit)
             {
-                Broadcast(Utils.Str("come", _x, _y), false, "explorers_channel");
-            }
+                // The first point it's its position.
+                _pathToExit.Pop();
 
-            // Stop the agent.
-            Console.WriteLine("{0}: Stopped", Name);
-            this.Stop();
+                // Successfully moved one position, get next one.
+                string nextPosition = _pathToExit.Peek();
+
+                Send("maze", Utils.Str("try_move", nextPosition));
+            }
         }
 
-        private void HandleCome(List<string> parameters)
+        /// <summary>
+        /// Method executed when the direction is blocked by an agent.
+        /// Require some comunication between them to unblock if there is no other way to go.
+        /// </summary>
+        /// <param name="parameters"></param>
+        private void HandleBlock(List<string> parameters)
         {
-            // Exit has been found.
-            _state = State.Exit;
+            Console.WriteLine("{0}: HandleBlock: State[{1}], Position({2}, {3}), Other[{4}]", Name, _state.ToString(), _x, _y, parameters[0]);
 
-            // Create path to the exit using the weights and the provided location.
-            int exitX = int.Parse(parameters[0]);
-            int exitY = int.Parse(parameters[1]);
-            CreatePathToExit(exitX, exitY);
+            // Should stop and reconsider state in each case?
 
-            // Todo: Delete that.
-            StringBuilder stringBuilder = new StringBuilder("My position: (" + _x + ", " + _y + ")" + 
-                System.Environment.NewLine + "Path to exit:");
-
-            foreach (string position in _pathToExit)
+            // If the state is Exploring, a block means that the lane is ocupied.
+            if (_state == State.Exploring)
             {
-                stringBuilder.Append(" ");
-                stringBuilder.Append("(" + position + ")");
+                // Check if we stucked with another exploring agent and there is no other means of movement.
+                if (_nextDirections.Count == 0 && parameters.Count > 0)
+                {
+                    // We are exchangeing informations with the agent.
+                    Send(parameters[0], "what_state");
+                }
+                else
+                {
+                    ExecuteExploringStrategy();
+                }
             }
-            Console.WriteLine(stringBuilder.ToString());
-            // End todo.
+            else if (_state == State.DeadEnd)
+            {
+                // Try again, it is a matter of time until it will be free.
+                Send("maze", Utils.Str("try_move", _lastPositions.Peek()));
+            }
+            else if (_state == State.Exit)
+            {
+                // Try again, it is a matter of time until it will be free. (or is it?)
+                Send("maze", Utils.Str("try_move", _pathToExit.Peek()));
+            }
         }
 
+        /// <summary>
+        /// Method used when communication between explorers emarge.
+        /// One agent has found a dead end and will communicate to others to not go that direction.
+        /// </summary>
+        /// <param name="parameters"> Contains 3 items: X, Y, direction </param>
         private void HandleAvoid(List<string> parameters)
         {
             // When going to exit, there is a predefined path.
@@ -150,10 +224,15 @@ namespace Reactive
             int avoidX = int.Parse(parameters[0]);
             int avoidY = int.Parse(parameters[1]);
             int avoidDir = int.Parse(parameters[2]);
-           
+
             Weights.Values[avoidX, avoidY, avoidDir] = 0;
         }
 
+        /// <summary>
+        /// When exploring message is sent by another explorer.
+        /// Update the path by slightly decreasing the value.
+        /// </summary>
+        /// <param name="parameters"> Contains 3 components: X, Y, directions </param>
         private void HandleExplored(List<string> parameters)
         {
             // When going to exit, there is a predefined path.
@@ -171,108 +250,91 @@ namespace Reactive
             Weights.Values[avoidX, avoidY, avoidDir] = Math.Max(0.01, oldValue - 0.1);
         }
 
-        private void HandleMove(List<string> parameters)
+        /// <summary>
+        /// Other agents could ask this one for the state and position.
+        /// Methid is responsible for sending back the requested information.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="parameters"></param>
+        private void HandleWhatState(string sender, List<string> parameters)
         {
-            Console.WriteLine("{0}: My state in the beginning of move is {1}.", Name, _state.ToString());
+            Send(sender, Utils.Str("state", _state.ToString(), _x, _y));
+        }
 
-            // This is triggered when the position has been accepted.
-            int oldX = _x;
-            int oldY = _y;
+        /// <summary>
+        /// When Block is received by agent while being in the Exploring phase, agent will communicate with the blocking one.
+        /// This method is invoked upon receiving the requested information.
+        /// </summary>
+        /// <param name="parameters"></param>
+        private void HandleState(List<string> parameters)
+        {
+            Console.WriteLine("{0}: HandleState: MyState[{1}], Position({2}, {3}), OtherState[{4}]", Name, _state.ToString(), _x, _y, parameters[0]);
+
+            if (_state == State.DeadEnd && _state == State.Exit)
+            {
+                // If in the dead end state, no matter the case, try again.
+                Send("maze", "waiting");
+                return;
+            }
+
+            if (_state == State.Exploring && parameters[0] == State.DeadEnd.ToString())
+            {
+                // If meeting with an DeadEnd, change state to dead end.
+                int otherX = int.Parse(parameters[1]);
+                int otherY = int.Parse(parameters[2]);
+
+                // Todo: Mark the direction as not visitable.
+                int dir = Utils.GetDirrerentialDirection(_x, _y, otherX, otherY);
+                Weights.Values[_x, _y, dir] = 0;
+
+                _state = State.DeadEnd;
+                Send("maze", "waiting");
+                return;
+            }
+
+            if (_state == State.Exploring && parameters[0] == State.Exploring.ToString())
+            {
+                // What to do now? Both are exploring. Doing the same for now.
+                // Could be an error here?
+                Send("maze", "waiting");
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Method responsible with handling the case when agent entered the exit map position.
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <param name="isFirst"> If it is the first agent to enter exit, it will inform others. </param>
+        private void HandleExit(List<string> parameters, bool isFirst)
+        {
             _x = int.Parse(parameters[0]);
             _y = int.Parse(parameters[1]);
 
-            if (_state == State.NotStarted)
+            // Send to all others the position if it was first time discovered.
+            if (isFirst)
             {
-                _state = State.Exploring;
-
-                // Create directions in which to move with exceptions of going back.
-                _nextDirections = GetNextDirectionsOrdered();
-
-                // Explore directions and try to get there.
-                ExecuteExploringStrategy();
-            }
-            else if (_state == State.Exploring)
-            {
-                // Push the last into the _lastPositions stack.
-                _lastPositions.Push(Utils.Str(oldX, oldY));
-
-                // Send to all that position has been explored.
-                int dir = Utils.GetDirrerentialDirection(oldX, oldY, _x, _y);
-                if (dir != -1)
-                {
-                    Broadcast(Utils.Str("exploring", oldX, oldY, dir), true, "explorers_channel");
-                }
-
-                // Create directions in which to move with exceptions of going back.
-                _nextDirections = GetNextDirectionsOrdered(_lastPositions.ToList());
-
-                // Explore directions and try to get there.
-                ExecuteExploringStrategy();
-            }
-            else if (_state == State.DeadEnd)
-            {
-                string lastPosition = Utils.Str(oldX, oldY);
-
-                // Send to all to avoid that position.
-                // If I were to go back, avoid this direction.
-                int dir = Utils.GetDirrerentialDirection(_x, _y, oldX, oldY);
-                Weights.Values[_x, _y, dir] = 0;
-                Broadcast(Utils.Str("avoid", _x, _y, dir), false, "explorers_channel");
-
-                ExecuteDeadEndStrategy(lastPosition);
-            }
-            else if (_state == State.Exit)
-            {
-                // The first point it's its position.
-                _pathToExit.Pop();
-
-                // Successfully moved one position, get next one.
-                string nextPosition = _pathToExit.Peek();
-
-                Send("maze", Utils.Str("try_move", nextPosition));
+                Broadcast(Utils.Str("come", _x, _y), false, "explorers_channel");
             }
 
-            Console.WriteLine("{0}: My state in the end of move is {1}.", Name, _state.ToString());
+            // Stop the agent.
+            Console.WriteLine("{0}: Stopped", Name);
+            this.Stop();
         }
 
-        private void HandleBlock(List<string> parameters)
+        /// <summary>
+        /// Method responsible for handling the case when one agent has reached exit and anounced this one about the location.
+        /// </summary>
+        /// <param name="parameters"></param>
+        private void HandleCome(List<string> parameters)
         {
-            // If the state is Exploring, a block means that the lane is ocupied. Should check for a different position or return.
-            if (_state == State.Exploring)
-            {
-                // Todo: delete this.
-                StringBuilder builder = new StringBuilder(Name + ": Blocked in exploring. Showcase my _nextDirections:" + System.Environment.NewLine);
-                foreach (int direction in _nextDirections)
-                {
-                    builder.Append(direction + " ");
-                }
-                Console.WriteLine(builder.ToString());
-                // End todo.
+            // Exit has been found.
+            _state = State.Exit;
 
-                // Check if we stucked with another exploring agent.
-                if (_nextDirections.Count > 0 && parameters.Count > 0)
-                {
-                    // We are, exchange informations with the agent.
-                    // If he is in deadline, we change our strategy to DeadEnd.
-                    // If he is exploring, we will wait for him to move forward.
-                    Send(parameters[0], "what_state");
-
-                    // The next of the interaction will be held with respect to the result of the communication.
-                    return;
-                }
-
-                ExecuteExploringStrategy();
-            } 
-            else if (_state == State.DeadEnd)
-            {
-                // Try again, it is a matter of time until it will be free.
-                Send("maze", Utils.Str("try_move", _lastPositions.Peek()));
-            }
-            else if (_state == State.Exit)
-            {
-                // Try again, it is a matter of time until it will be free. (or is it?)
-                Send("maze", Utils.Str("try_move", _pathToExit.Peek()));
-            }
+            // Create path to the exit using the weights and the provided location.
+            int exitX = int.Parse(parameters[0]);
+            int exitY = int.Parse(parameters[1]);
+            CreatePathToExit(exitX, exitY);
         }
 
         private void ExecuteExploringStrategy()
@@ -281,11 +343,14 @@ namespace Reactive
             if (_nextDirections.Count == 0)
             {
                 _state = State.DeadEnd;
-                Send("maze", Utils.Str("try_move", _lastPositions.Peek()));
+                Send("maze", "waiting");
+/*                Send("maze", Utils.Str("try_move", _lastPositions.Peek()));*/            
             }
             else
             {
-                // Else, go through the best direction available.
+                // Else, go through the best direction available. (Should we just drop here the last direction?)
+                // We could wait for a move in order to rewrite. Or better a block one, because this is the only one affecttng.
+                // In what conditions do we need to check a direction 2 times? TODO.
                 int bestDir = _nextDirections[_nextDirections.Count - 1];
                 int bestX = _x + Utils.dWidth[bestDir];
                 int bestY = _y + Utils.dHeight[bestDir];
@@ -294,7 +359,7 @@ namespace Reactive
             }
         }
 
-        private void ExecuteDeadEndStrategy(string lastPosition = null)
+        private void ExecuteDeadEndStrategy()
         {
             // Get rid of the last position only if we successfully moved.
             if (_lastPositions.Peek() == Utils.Str(_x, _y))
@@ -304,16 +369,10 @@ namespace Reactive
 
             // Get the available directions besides moving back on the already explored path.
             List<string> exclude = new List<string>(_lastPositions);
-            if (lastPosition != null)
-            {
-                exclude.Add(lastPosition);
-            }
             List<int> availableDirections = GetNextDirectionsOrdered(exclude);
 
-            // Keeping going backwards.
-            // If no more last positions, then it means that we are on the start position.
-            // Go back to exploring state. Could lead to being blocked? TODO.
-            if (availableDirections.Count == 0 && _lastPositions.Count != 0)
+            // Only going backward is available or no direction.
+            if (availableDirections.Count == 0)
             {
                 Send("maze", Utils.Str("try_move", _lastPositions.Peek()));
             }
@@ -327,24 +386,12 @@ namespace Reactive
                 // Update directions.
                 _nextDirections = availableDirections;
 
-                // Explore directions and try to get there.
-                ExecuteExploringStrategy();
+                Send("maze", "waiting");
             }
         }
 
         private List<int> GetNextDirectionsOrdered(List<string> exclude = null)
         {
-            // Todo: Delete this.
-            StringBuilder stringBuilder1 = new StringBuilder("Adiacent directions:" + System.Environment.NewLine);
-            for(int dir = 0; dir < 4; dir ++)
-            {
-                stringBuilder1.Append("Direction: " + dir);
-                stringBuilder1.Append(" - Weight: " + Weights.Values[_x, _y, dir]);
-                stringBuilder1.Append(System.Environment.NewLine);
-            }
-            Console.Write(stringBuilder1.ToString());
-            // Todo - end.
-
             if (exclude == null) exclude = new List<string>();
 
             List<int> nextDirections = new List<int>();
@@ -372,93 +419,14 @@ namespace Reactive
                 return Weights.Values[_x, _y, dir1].CompareTo(Weights.Values[_x, _y, dir2]);
             });
             nextDirections.Sort(compareDirectionWeights);
-
-            // Todo: Delete this.
-            StringBuilder stringBuilder = new StringBuilder("Sorted list asc for the nextDirections:" + System.Environment.NewLine);
-            foreach (int dir in nextDirections)
-            {
-                stringBuilder.Append("Direction: " + dir);
-                stringBuilder.Append(" - Weight: " + Weights.Values[_x, _y, dir]);
-                stringBuilder.Append(System.Environment.NewLine);
-            }
-            Console.Write(stringBuilder.ToString());
-            // Todo - end.
-
             return nextDirections;
         }
 
-        /*private void MoveRandomly()
-        {
-            int d = Utils.RandNoGen.Next(4);
-            switch (d)
-            {
-                case 0: if (_x > 0 && Utils.Maze[_x - 1, _y] == 0) _x--; break;
-                case 1: if (_x < Utils.Size - 1 && Utils.Maze[_x + 1, _y] == 0) _x++; break;
-                case 2: if (_y > 0 && Utils.Maze[_x, _y - 1] == 0) _y--; break;
-                case 3: if (_y < Utils.Size - 1 && Utils.Maze[_x, _y + 1] == 0) _y++; break;
-            }
-        }
-
-        private void MoveBestDirection()
-        {
-            List<int> bestDirs = FindBestDirection();
-            if (bestDirs.Count == 0)
-            {
-                // No place to go. Change state to DeadEnd.
-                _state = State.DeadEnd;
-            } 
-            else
-            {
-                if (_lastPositions.Count == 0 || _lastPositions.Peek() != Utils.Str(_x, _y))
-                {
-                    _lastPositions.Push(Utils.Str(_x, _y));
-                }
-
-                // Choose randomly a direction from BestDirs.
-                int dir = bestDirs[Utils.RandNoGen.Next(bestDirs.Count)];
-                // Sent to all the direction to go.
-                Broadcast(Utils.Str("exploring", _x, _y, dir), false, "explorers_channel");
-                _x += Utils.dWidth[dir];
-                _y += Utils.dHeight[dir];
-            }
-        }
-
-        private void MoveBackwords()
-        {
-            string lastPosition = _lastPositions.Pop();
-            string[] positions = lastPosition.Split();
-            int newX = int.Parse(positions[0]);
-            int newY = int.Parse(positions[1]);
-
-            // Never coming back in this direction.
-            // newX + dx = _x
-            // dx = _x - newX
-            int dx = _x - newX;
-            int dy = _y - newY;
-            int dir;
-            for (dir = 0; dir < 4 && (Utils.dWidth[dir] != dx || Utils.dHeight[dir] != dy); dir++);
-
-            if (dir < 4)
-            {
-                Weights.Values[newX, newY, dir] = 0;
-                // Send to others the coordinate to avoid.
-                Broadcast(Utils.Str("avoid", newX, newY, dir), false, "explorers_channel");
-            }
-
-            _x = newX;
-            _y = newY;
-        }
-
-        private void MoveToExit()
-        {
-            // Todo: Pop element from _pathToExit queue.
-            string lastPosition = _pathToExit.Pop();
-            string[] positions = lastPosition.Split();
-            _x = int.Parse(positions[0]);
-            _y = int.Parse(positions[1]);
-        }
-*/
-
+        /// <summary>
+        /// Method responsible for creating the shortest path from agent to exit.
+        /// </summary>
+        /// <param name="exitX"></param>
+        /// <param name="exitY"></param>
         private void CreatePathToExit(int exitX, int exitY)
         {
             // Populate _pathToExit using Lee algorithm.

@@ -102,6 +102,10 @@ namespace Reactive
                     HandleSpawn();
                     break;
 
+                case "waiting":
+                    HandleWaiting(message.Sender, parameters);
+                    break;
+
                 case "try_move":
                     HandleTryMove(message.Sender, parameters);
                     break;
@@ -112,6 +116,10 @@ namespace Reactive
             _formGui.UpdatePlanetGUI();
         }
 
+        /// <summary>
+        /// Method responsible with spawning the explorers into the maze.
+        /// Checks if the start is free and will spawn a new explorer if it is indeed free.
+        /// </summary>
         private void HandleSpawn()
         {
             _spawnTimer.Stop();
@@ -125,7 +133,7 @@ namespace Reactive
                 }
             }
 
-            Console.WriteLine("Number of available: " + numberOfAvailable);
+            Console.WriteLine("{0}: Left to spawn: {1}", Name, numberOfAvailable);
 
             if (numberOfAvailable > 0)
             {
@@ -162,11 +170,10 @@ namespace Reactive
                     }
                     numberOfAvailable--;
                     ExplorerVisible[nextExplorer] = true;
+                    ExplorerPositions[nextExplorer] = _startPosition;
                     Send(nextExplorer, Utils.Str("move", _startPosition));
                 }
             }
-
-            Console.WriteLine("Number of after match: " + numberOfAvailable);
 
             // There are still agents to be spawn.
             if (numberOfAvailable > 0) {
@@ -174,16 +181,25 @@ namespace Reactive
             }
         }
 
+        /// <summary>
+        /// This is a relay type of action. The purpose is to simplify the logic from the agent.
+        /// Will redirect its action to do action.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="parameters"></param>
+        private void HandleWaiting(string sender, string parameters)
+        {
+            // Will just poke the agent to do an action.
+            Send(sender, "do_action");
+        }
+
+        /// <summary>
+        /// Explorers send try_move to check if the place is occupied by another agent or not.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="position"></param>
         private void HandleTryMove(string sender, string position)
         {
-            // If has not spawn yet, add it to the ExplorerPositions.
-            if (!ExplorerPositions.ContainsKey(sender))
-            {
-                ExplorerPositions.Add(sender, position);
-                Send(sender, Utils.Str("move", position));
-                return;
-            }
-
             // The agent is already spawned, check if the requested place is blocked by anoter agent or a wall.
             // (1) Check if there is a wall.
             List<int> point;
@@ -242,56 +258,6 @@ namespace Reactive
             }
                 
             Send(sender, Utils.Str("move", position));
-        }
-
-        private void HandleChange(string sender, string position)
-        {
-            // Todo: Why change the position without checking if it is blocking.
-            ExplorerPositions[sender] = position;
-
-            foreach (string k in ExplorerPositions.Keys)
-            {
-                if (k == sender)
-                    continue;
-                if (ExplorerPositions[k] == position)
-                {
-                    Send(sender, Utils.Str("block", ExplorerPositions[k]));
-                    return;
-                }
-            }
-
-            if (position == _exitPosition)
-            {
-                if (exitFound)
-                { 
-                    Send(sender, "exit");
-                }
-                else
-                {
-                    Send(sender, "found");
-                    exitFound = true;
-                }
-
-                // Kill agent.
-                ExplorerVisible[sender] = false;
-                ExplorerPositions.Remove(sender);
-
-                Console.WriteLine("Remaining Explirers: {0}", ExplorerPositions.Count);
-                if(ExplorerPositions.Count == 0)
-                {
-                    Console.WriteLine("{0}: Stopped", Name);
-                    foreach(string agent in Environment.AllAgents())
-                    {
-                        Console.WriteLine("Remaining agent: {0}", agent);
-                    }
-                    _formGui.Close();
-                    this.Stop();
-                }
-            } 
-            else
-            {
-                Send(sender, Utils.Str("move", position));
-            }
         }
     }
 }
