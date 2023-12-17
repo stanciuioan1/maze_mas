@@ -1,10 +1,7 @@
 ﻿using ActressMas;
 using System;
 using System.Collections.Generic;
-using System.Data.OleDb;
 using System.Linq;
-using System.Runtime.ExceptionServices;
-using System.Text;
 
 namespace Reactive
 {

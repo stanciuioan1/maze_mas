@@ -7,7 +7,7 @@ namespace Reactive
     public class Utils
     {
         public static int Size = 11;
-        public static int NoExplorers = 10;
+        public static int NoExplorers = 100;
         public static int[,] Maze = {
             {2,1,1,1,1,1,1,1,1,1,3},
             {0,1,0,0,0,0,1,0,0,0,0},
