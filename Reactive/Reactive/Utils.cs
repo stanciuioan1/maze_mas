@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Contexts;
 
 namespace Reactive
 {
     public class Utils
     {
         public static int Size = 11;
-        public static int NoExplorers = 5;
+        public static int NoExplorers = 10;
         public static int[,] Maze = {
             {2,1,1,1,1,1,1,1,1,1,3},
             {0,1,0,0,0,0,1,0,0,0,0},
@@ -23,7 +22,7 @@ namespace Reactive
             {1,1,0,0,0,0,0,0,0,0,0},
         };
 
-        public static int Delay = 200;
+        public static int Delay = 400;
         public static int SpawnDelay = 2 * Delay;
         public static Random RandNoGen = new Random();
         public static int[] dWidth = { 1, 0, -1, 0 };
@@ -66,6 +65,22 @@ namespace Reactive
             return weightedMaze;
         }
 
+        public static int GetDirrerentialDirection(int startX, int startY, int endX, int endY)
+        {
+            int dX = endX - startX;
+            int dY = endY - startY;
+
+            for(int direction = 0; direction < 4; direction ++)
+            {
+                if (dX == dWidth[direction] && dY == dHeight[direction])
+                {
+                    return direction;
+                }
+            }
+
+            return -1;
+        }
+
         public static void ParseMessage(string content, out string action, out List<string> parameters)
         {
             string[] t = content.Split();
@@ -96,6 +111,13 @@ namespace Reactive
         public static void ParseParameters(string content, out List<string> parameters)
         { 
             parameters = content.Split().ToList<string>();
+        }
+
+        public static void ParseIntParameters(string content, out List<int> parameters)
+        {
+            List<string> splited;
+            ParseParameters(content, out splited);
+            parameters = splited.Select(str => int.Parse(str)).ToList();
         }
 
         public static string Str(object p1, object p2)

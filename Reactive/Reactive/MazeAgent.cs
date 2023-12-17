@@ -102,12 +102,8 @@ namespace Reactive
                     HandleSpawn();
                     break;
 
-                case "position":
-                    HandlePosition(message.Sender, parameters);
-                    break;
-
-                case "change":
-                    HandleChange(message.Sender, parameters);
+                case "try_move":
+                    HandleTryMove(message.Sender, parameters);
                     break;
 
                 default:
@@ -166,7 +162,7 @@ namespace Reactive
                     }
                     numberOfAvailable--;
                     ExplorerVisible[nextExplorer] = true;
-                    Send(nextExplorer, Utils.Str("spawn", _startPosition));
+                    Send(nextExplorer, Utils.Str("move", _startPosition));
                 }
             }
 
@@ -178,10 +174,74 @@ namespace Reactive
             }
         }
 
-        private void HandlePosition(string sender, string position)
+        private void HandleTryMove(string sender, string position)
         {
-            ExplorerPositions.Add(sender, position);
-            Send(sender, "move");
+            // If has not spawn yet, add it to the ExplorerPositions.
+            if (!ExplorerPositions.ContainsKey(sender))
+            {
+                ExplorerPositions.Add(sender, position);
+                Send(sender, Utils.Str("move", position));
+                return;
+            }
+
+            // The agent is already spawned, check if the requested place is blocked by anoter agent or a wall.
+            // (1) Check if there is a wall.
+            List<int> point;
+            Utils.ParseIntParameters(position, out point);
+            if (Utils.Maze[point[0], point[1]] == 1)
+            {
+                Send(sender, "block");
+                return;
+            }
+
+            // (2) Check if there is an agent.
+            foreach (string k in ExplorerPositions.Keys)
+            {
+                if (k == sender)
+                    continue;
+                if (ExplorerPositions[k] == position)
+                {
+                    // Besides just block, send also the explorer's name to comunicate the state.
+                    Send(sender, Utils.Str("block", k));
+                    return;
+                }
+            }
+
+            // The position is free, placing the sender on that position.
+            ExplorerPositions[sender] = position;
+
+            // Check if the position is exit.
+            if (position == _exitPosition)
+            {
+                if (exitFound)
+                {
+                    Send(sender, Utils.Str("exit", position));
+                }
+                else
+                {
+                    Send(sender, Utils.Str("found", position));
+                    exitFound = true;
+                }
+
+                // Kill agent.
+                ExplorerVisible[sender] = false;
+                ExplorerPositions.Remove(sender);
+
+                Console.WriteLine("Remaining Explirers: {0}", ExplorerPositions.Count);
+                if (ExplorerPositions.Count == 0)
+                {
+                    Console.WriteLine("{0}: Stopped", Name);
+                    foreach (string agent in Environment.AllAgents())
+                    {
+                        Console.WriteLine("Remaining agent: {0}", agent);
+                    }
+                    _formGui.Close();
+                    this.Stop();
+                }
+                return;
+            }
+                
+            Send(sender, Utils.Str("move", position));
         }
 
         private void HandleChange(string sender, string position)
@@ -230,7 +290,7 @@ namespace Reactive
             } 
             else
             {
-                Send(sender, "move");
+                Send(sender, Utils.Str("move", position));
             }
         }
     }
