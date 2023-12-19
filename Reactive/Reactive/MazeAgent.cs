@@ -235,7 +235,7 @@ namespace Reactive
                     {
                         Console.WriteLine("Remaining agent: {0}", agent);
                     }
-                    _formGui.Close();
+                    //_formGui.Close();
                     this.Stop();
                 }
                 return;
