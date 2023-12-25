@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ActressMas">
-      <HintPath>..\..\..\..\Labs\MAS\ActressMas.dll</HintPath>
+      <HintPath>..\..\..\ActressMas\ActressMas.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

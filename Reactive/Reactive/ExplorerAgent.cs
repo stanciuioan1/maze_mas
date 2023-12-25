@@ -8,6 +8,7 @@ namespace Reactive
     public class ExplorerAgent : Agent
     {
         private int _x, _y;
+        private int _exitX, _exitY;
         private Stack<string> _lastPositions;
         private Stack<string> _pathToExit;
         private List<int> _nextDirections;
@@ -20,6 +21,8 @@ namespace Reactive
         {
             _x = -1;
             _y = -1;
+            _exitX = -1;
+            _exitY = -1;
             _lastPositions = new Stack<string>();
             _pathToExit = new Stack<string>();
             _state = State.NotStarted;
@@ -122,11 +125,21 @@ namespace Reactive
 
             if (_state == State.NotStarted)
             {
-                // Going to exploration <3.
-                _state = State.Exploring;
+                if (_exitX != -1 && _exitY != -1)
+                {
+                    // Exit has been discovered.
+                    _state = State.Exit;
 
-                // Search for the next available directions with no exception.
-                _nextDirections = GetNextDirectionsOrdered();
+                    CreatePathToExit(_exitX, _exitY);
+                }
+                else
+                {
+                    // Going to exploration <3.
+                    _state = State.Exploring;
+
+                    // Search for the next available directions with no exception.
+                    _nextDirections = GetNextDirectionsOrdered();
+                }
 
                 // The state will be treated in the HandleAction() method.
                 Send(Name, "do_action");
@@ -264,7 +277,7 @@ namespace Reactive
         {
             Console.WriteLine("{0}: HandleState: MyState[{1}], Position({2}, {3}), OtherState[{4}]", Name, _state.ToString(), _x, _y, parameters[0]);
 
-            if (_state == State.DeadEnd && _state == State.Exit)
+            if (_state == State.DeadEnd || _state == State.Exit)
             {
                 // If in the dead end state, no matter the case, try again.
                 Send(Name, "do_action");
@@ -322,13 +335,20 @@ namespace Reactive
         /// <param name="parameters"></param>
         private void HandleCome(List<string> parameters)
         {
+            // Create path to the exit using the weights and the provided location.
+            _exitX = int.Parse(parameters[0]);
+            _exitY = int.Parse(parameters[1]);
+
+            if (_state == State.NotStarted)
+            {
+                // Will wait for the agent to be spawned and create the path to exit after.
+                return;
+            }
+
             // Exit has been found.
             _state = State.Exit;
 
-            // Create path to the exit using the weights and the provided location.
-            int exitX = int.Parse(parameters[0]);
-            int exitY = int.Parse(parameters[1]);
-            CreatePathToExit(exitX, exitY);
+            CreatePathToExit(_exitX, _exitY);
         }
 
         private void ExecuteExploringStrategy()
@@ -355,7 +375,7 @@ namespace Reactive
         private void ExecuteDeadEndStrategy()
         {
             // Get rid of the last position only if we successfully moved.
-            if (_lastPositions.Peek() == Utils.Str(_x, _y))
+            if (_lastPositions.Count > 0 && _lastPositions.Peek() == Utils.Str(_x, _y))
             {
                 _lastPositions.Pop();
             }
@@ -365,7 +385,7 @@ namespace Reactive
             List<int> availableDirections = GetNextDirectionsOrdered(exclude);
 
             // Only going backward is available or no direction.
-            if (availableDirections.Count == 0)
+            if (_lastPositions.Count > 0 && availableDirections.Count == 0)
             {
                 Send("maze", Utils.Str("try_move", _lastPositions.Peek()));
             }

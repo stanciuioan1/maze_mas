@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Forms;
 using System.Timers;
+using System.Linq;
 
 
 namespace Reactive
@@ -14,7 +15,8 @@ namespace Reactive
         private MazeForm _formGui;
         public List<ExplorerAgent> Explorers { get; set; }
         public Dictionary<string, string> ExplorerPositions { get; set; }
-        public Dictionary<string, bool> ExplorerVisible { get; set; }
+        public enum ExplorerState { NotSpawned, Visible, Dead };
+        public Dictionary<string, ExplorerState> ExplorerStates { get; set; }
         public ExplorerAgent SelectedExplorer;
         private string _startPosition;
         private string _exitPosition;
@@ -27,7 +29,7 @@ namespace Reactive
         {
             Explorers = new List<ExplorerAgent>();
             ExplorerPositions = new Dictionary<string, string>();
-            ExplorerVisible = new Dictionary<string, bool>();
+            ExplorerStates = new Dictionary<string, ExplorerState>();
 
             // Find out _startPosition by checking the Maze for value 2.
             // Find out _endPosition by checking the Maze for value 3.
@@ -70,16 +72,11 @@ namespace Reactive
         public override void Setup()
         {
             Console.WriteLine("Starting " + Name);
-            
-            // Todo: Is this required?
-            List<string> resPos = new List<string>();
-            resPos.Add(_startPosition); 
-            resPos.Add(_exitPosition);
 
             // Explorers are not visible in the beginning.
             foreach(ExplorerAgent explorer in Explorers)
             {
-                ExplorerVisible[explorer.Name] = false;
+                ExplorerStates[explorer.Name] = ExplorerState.NotSpawned;
             }
 
             // Start spawn timer;
@@ -121,9 +118,9 @@ namespace Reactive
             _spawnTimer.Stop();
 
             int numberOfAvailable = 0;
-            foreach(string explorer in ExplorerVisible.Keys)
+            foreach(string explorer in ExplorerStates.Keys)
             {
-                if (ExplorerVisible[explorer] == false)
+                if (ExplorerStates[explorer] == ExplorerState.NotSpawned)
                 {
                     numberOfAvailable++;
                 }
@@ -138,7 +135,7 @@ namespace Reactive
                 bool isStartFree = true;
                 foreach (ExplorerAgent explorer in Explorers)
                 {
-                    if (ExplorerVisible[explorer.Name] == false)
+                    if (ExplorerStates[explorer.Name] == ExplorerState.NotSpawned)
                     {
                         nextExplorer = explorer.Name;
                         break;
@@ -165,7 +162,7 @@ namespace Reactive
                         }
                     }
                     numberOfAvailable--;
-                    ExplorerVisible[nextExplorer] = true;
+                    ExplorerStates[nextExplorer] = ExplorerState.Visible;
                     ExplorerPositions[nextExplorer] = _startPosition;
                     Send(nextExplorer, Utils.Str("move", _startPosition));
                 }
@@ -224,7 +221,7 @@ namespace Reactive
                 }
 
                 // Kill agent.
-                ExplorerVisible[sender] = false;
+                ExplorerStates[sender] = ExplorerState.Dead;
                 ExplorerPositions.Remove(sender);
 
                 Console.WriteLine("Remaining Explirers: {0}", ExplorerPositions.Count);

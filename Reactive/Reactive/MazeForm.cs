@@ -119,7 +119,7 @@ namespace Reactive
             {
                 foreach (string explorer in _ownerAgent.ExplorerPositions.Keys)
                 {
-                    if (_ownerAgent.ExplorerVisible[explorer] == false) { continue; }
+                    if (_ownerAgent.ExplorerStates[explorer] != MazeAgent.ExplorerState.Visible) { continue; }
 
                     string v = _ownerAgent.ExplorerPositions[explorer];
                     string[] t = v.Split();
