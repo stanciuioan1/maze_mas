@@ -4,37 +4,123 @@ using System.Linq;
 
 namespace Reactive
 {
+    class Point
+    {
+        public int r;
+        public int c;
+        public Point parent;
+
+        public Point(int x, int y, Point p)
+        {
+            r = x;
+            c = y;
+            parent = p;
+        }
+
+        // compute the opposite node given that it is in the other direction from the parent
+        public Point opposite()
+        {
+            if (r.CompareTo(parent.r) != 0)
+                return new Point(r + r.CompareTo(parent.r), c, this);
+            if (c.CompareTo(parent.c) != 0)
+                return new Point(r, c + c.CompareTo(parent.c), this);
+            return null;
+        }
+    }
+
+
+
+
+
     public class Utils
     {
         public static int Size = 20;
-        public static int NoExplorers = 15;
-        public static int[,] Maze = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
-{0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1},
-{0, 0, 2, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
-{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-{0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-{0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
-{0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1},
-{0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1},
-{0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-{0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1},
-{0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0},
-{0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1},
-{0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
-{0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1},
-{0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0},
-{0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1},
-{0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
-{0, 3, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1},
-};
+        public static int NoExplorers = 5;
+        public static int[,] Maze = GetMatrix(Size, Size);
 
         public static int Delay = 400;
         public static int SpawnDelay = 2 * Delay;
         public static Random RandNoGen = new Random();
         public static int[] dWidth = { 1, 0, -1, 0 };
         public static int[] dHeight = { 0, 1, 0, -1 };
+
+        private static int[,] GetMatrix(int rows, int columns)
+        {
+            string wallRow = new string('0', columns);
+            int[,] maze = new int[rows, columns];
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < columns; j++)
+                    maze[i, j] = 0;
+
+            Point start = new Point((int)(new Random().NextDouble() * rows), (int)(new Random().NextDouble() * columns), null);
+            maze[start.r, start.c] = 2;
+            List<Point> frontier = new List<Point>();
+            for (int x = -1; x <= 1; x++)
+                for (int y = -1; y <= 1; y++)
+                {
+                    if ((x == 0 && y == 0) || (x != 0 && y != 0))
+                        continue;
+                    try
+                    {
+                        if (maze[start.r + x, start.c + y] == 1) continue;
+                    }
+                    catch (IndexOutOfRangeException)
+                    {
+                        continue;
+                    }
+                    frontier.Add(new Point(start.r + x, start.c + y, start));
+                }
+
+            Point last = null;
+            Random random = new Random();
+
+            while (frontier.Count > 0)
+            {
+                // pick the current node at random
+                int value = random.Next(frontier.Count);
+                Point current = frontier[value];
+                frontier.RemoveAt(value);
+                Point opposite = current.opposite();
+                try
+                {
+                    // if both the node and its opposite are walls
+                    if (maze[current.r, current.c] == 0)
+                    {
+                        if (maze[opposite.r, opposite.c] == 0)
+                        {
+                            // open a path between the nodes
+                            maze[current.r, current.c] = 1;
+                            maze[opposite.r, opposite.c] = 1;
+                            // store the last node to mark it later
+                            last = opposite;
+
+                            // iterate through direct neighbors of the node, same as earlier
+                            for (int x = -1; x <= 1; x++)
+                                for (int y = -1; y <= 1; y++)
+                                {
+                                    if ((x == 0 && y == 0) || (x != 0 && y != 0))
+                                        continue;
+                                    if (maze[opposite.r + x, opposite.c + y] == 1)
+                                        continue;
+                                    frontier.Add(new Point(opposite.r + x, opposite.c + y, opposite));
+                                }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignore NullPointer and ArrayIndexOutOfBounds
+                }
+
+                // if the algorithm has resolved, mark the end node
+                if (frontier.Count == 0)
+                    maze[last.r, last.c] = 3;
+
+            }
+
+            return maze;
+
+        }
 
         public static WeightedMaze CreateWeightedMaze(int[,] maze)
         {
