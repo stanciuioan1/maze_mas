@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 
 namespace Reactive
@@ -34,23 +35,51 @@ namespace Reactive
 
     public class Utils
     {
+        private static bool isTesting = false;
         public static int Size = 20;
         public static int NoExplorers = 5;
-        public static int[,] Maze = GetMatrix(Size, Size);
-
+        public static int[,] Maze = selectMatrix();
         public static int Delay = 400;
         public static int SpawnDelay = 2 * Delay;
         public static Random RandNoGen = new Random();
         public static int[] dWidth = { 1, 0, -1, 0 };
         public static int[] dHeight = { 0, 1, 0, -1 };
+        private static int[,] selectMatrix()
+        {
+            int[,] localMaze =  {
+                { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
+                { 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1},
+                { 0, 0, 2, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},
+                { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                { 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+                { 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
+                { 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1},
+                { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1},
+                { 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+                { 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1},
+                { 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0},
+                { 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1},
+                { 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
+                { 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1},
+                { 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0},
+                { 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1},
+                { 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0},
+                { 0, 3, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1},
+                };
 
+            if (isTesting == true)
+                return localMaze;
+            else
+                return GetMatrix(Size, Size);
+        }
         private static int[,] GetMatrix(int rows, int columns)
         {
-            string wallRow = new string('0', columns);
             int[,] maze = new int[rows, columns];
             for (int i = 0; i < rows; i++)
                 for (int j = 0; j < columns; j++)
-                    maze[i, j] = 0;
+                    maze[i, j] = 1;
 
             Point start = new Point((int)(new Random().NextDouble() * rows), (int)(new Random().NextDouble() * columns), null);
             maze[start.r, start.c] = 2;
@@ -62,7 +91,7 @@ namespace Reactive
                         continue;
                     try
                     {
-                        if (maze[start.r + x, start.c + y] == 1) continue;
+                        if (maze[start.r + x, start.c + y] == 0) continue;
                     }
                     catch (IndexOutOfRangeException)
                     {
@@ -84,13 +113,13 @@ namespace Reactive
                 try
                 {
                     // if both the node and its opposite are walls
-                    if (maze[current.r, current.c] == 0)
+                    if (maze[current.r, current.c] == 1)
                     {
-                        if (maze[opposite.r, opposite.c] == 0)
+                        if (maze[opposite.r, opposite.c] == 1)
                         {
                             // open a path between the nodes
-                            maze[current.r, current.c] = 1;
-                            maze[opposite.r, opposite.c] = 1;
+                            maze[current.r, current.c] = 0;
+                            maze[opposite.r, opposite.c] = 0;
                             // store the last node to mark it later
                             last = opposite;
 
@@ -100,7 +129,7 @@ namespace Reactive
                                 {
                                     if ((x == 0 && y == 0) || (x != 0 && y != 0))
                                         continue;
-                                    if (maze[opposite.r + x, opposite.c + y] == 1)
+                                    if (maze[opposite.r + x, opposite.c + y] == 0)
                                         continue;
                                     frontier.Add(new Point(opposite.r + x, opposite.c + y, opposite));
                                 }
